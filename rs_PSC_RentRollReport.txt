@@ -1,0 +1,298 @@
+//notes 
+
+
+//end notes 
+
+
+//select display 
+
+
+/*SELECT t.hMyPerson TenantId, case when isnull(tc.hUnit, 0) = 0 then t.hUnit else tc.hUnit end hUnit,
+               sum(case when d.hAcct = 496 and tc.hRetentionAcct = 15 then d.sAmount else 0 end) Deposit0,
+                 0 Deposit1,
+                 0 Deposit2,
+                 0 Deposit3,
+                 0 Deposit4,
+                 0 Deposit5,
+                 0 Deposit6,
+                 0 Deposit7,
+                 0 Deposit8,
+                 0 Deposit9
+              INTO #tempDeposits
+              FROM Trans tr
+              INNER JOIN tenant t ON t.hMyPerson = tr.hPerson
+              INNER Join Detail d ON (d.hInvorrec = tr.hMy) 
+              INNER Join Trans tc  ON (d.hChkOrChg = tc.hMy) 
+            WHERE t.hProperty IN (3)
+              AND tr.iType = 6 
+              AND tc.iType = 7 
+            AND d.hAcct IN (496 )
+            AND tc.hRetentionAcct IN (15 )
+            AND tr.uPostDate <= convert(datetime, N'09/01/2025', 101)
+              AND isnull(tr.sNotes, '') NOT LIKE N'%reverse%'
+              AND d.sAmount > 0
+              GROUP BY t.hMyPerson, case when isnull(tc.hUnit, 0) = 0 then t.hUnit else tc.hUnit end
+*/
+SELECT * FROM ( SELECT p.sCode PropCode, u.sCode ucode, ut.sCode UnitTypeCode, ut.sDesc UnitTypeDesc,
+                       p.hmy Prophmy, u.hmy uhmy, ut.hMy UnitTypeId,
+                       isnull(uh.dsqft,u.dsqft) Sqft, p.sState State,
+                       case upper(us.sStatus) 
+                            when N'OCCUPIED NO NOTICE' then isnull(t.scode,N'VACANT') 
+                            when N'NOTICE UNRENTED' then isnull(t.scode,N'VACANT')
+                            when N'NOTICE RENTED' then isnull(t.scode,N'VACANT')
+                          when N'VACANT RENTED READY' then case when ux.DTMOVEOUT = convert(datetime, N'09/01/2025', 101) then isnull(t.scode,N'VACANT') else N'VACANT' end 
+                          when N'VACANT RENTED NOT READY' then case when ux.DTMOVEOUT = convert(datetime, N'09/01/2025', 101) then isnull(t.scode,N'VACANT') else N'VACANT' end 
+                          when N'VACANT UNRENTED READY' then case when ux.DTMOVEOUT = convert(datetime, N'09/01/2025', 101) then isnull(t.scode,N'VACANT') else N'VACANT' end 
+                          when N'VACANT UNRENTED NOT READY' then case when ux.DTMOVEOUT = convert(datetime, N'09/01/2025', 101) then isnull(t.scode,N'VACANT') else N'VACANT' end 
+                            When N'MODEL' then N'MODEL'
+                            When N'DOWN' then N'DOWN'
+                            when N'ADMIN' then N'ADMIN'
+                       end tscode, 
+                       case upper(us.sStatus) 
+                            when N'MODEL' then N'MODEL' 
+                            When N'DOWN' then N'DOWN' 
+                            when N'ADMIN' then N'ADMIN' 
+                          else case when us.sStatus IN(N'VACANT UNRENTED NOT READY', N'VACANT RENTED NOT READY', N'VACANT UNRENTED READY', N'VACANT RENTED READY') THEN case when ux.DTMOVEOUT = convert(datetime, N'09/01/2025', 101)
+                                                                                                                                                                             then RTRIM(ISNULL(t.sfirstname, ''))
+                                                                                                                                                                                  + CASE RTRIM(ISNULL(t.sfirstname, '')) WHEN '' THEN '' ELSE N' ' END 
+                                                                                                                                                                                  + RTRIM(ISNULL(t.slastname, ''))
+                                                                                                                                                                            else N'VACANT' 
+                                                                                                                                                                      end 
+  	                                 else rtrim(isnull(t.sfirstname,''))
+                           	              + CASE rtrim(isnull(t.sfirstname,'')) WHEN '' THEN '' ELSE N' ' END 
+                           	              + rtrim(isnull(t.slastname,'')) 
+                                 end
+                       end Tenant_Name,
+                       t.iStatus TenantStatus,
+                       t.hProspect ProspectId,
+                   isnull(uh.crent, u.sRent) MarketRent,
+                   Case upper(us.sStatus) 
+                      when N'VACANT UNRENTED READY' THEN 0 
+                      When N'VACANT UNRENTED NOT READY' THEN 0 
+                      When N'MODEL' Then 0 When N'DOWN' Then 0 When N'ADMIN' Then 0 
+                      ELSE  CASE WHEN t.scode IS NULL THEN 0 
+                                 ELSE sum(CASE cr.iestimatetype 
+                                              WHEN 0 THEN ((cr.DESTIMATED * t.srent)/100) 
+                                              WHEN 1 THEN case when isnull(p.iTypeCommercial,0) = 0 then (cr.DESTIMATED * t.dleasegrosssqft) else cr.dMonthlyAmount end 
+                                              WHEN 2 THEN (cr.DESTIMATED)
+                                              ELSE 0
+                                          END) 
+                            END 
+                   End TenantRent,
+                   0 TenantCAM,
+                   Case upper(us.sStatus) 
+                      when N'VACANT UNRENTED READY' THEN 0 
+                      When N'VACANT UNRENTED NOT READY' THEN 0 
+                      When N'MODEL' Then 0 When N'DOWN' Then 0 When N'ADMIN' Then 0 
+                      ELSE CASE WHEN t.scode IS NULL THEN 0
+                                ELSE crOth.DESTIMATEDMISC 
+                           End
+                   END TenantMisc,
+                       Case upper(us.sStatus) 
+                             when N'VACANT UNRENTED READY' Then 0  
+                             When N'VACANT UNRENTED NOT READY' Then 0  
+                             When N'MODEL' Then 0 When N'DOWN' Then 0 When N'ADMIN' Then 0  
+                             Else isnull(dep.Deposit0, 0)
+                       End Deposit,
+                       Case upper(us.sStatus) 
+                             when N'VACANT UNRENTED READY' Then 0  
+                             When N'VACANT UNRENTED NOT READY' Then 0  
+                             When N'MODEL' Then 0 When N'DOWN' Then 0 When N'ADMIN' Then 0  
+                             Else isnull(dep.Deposit1,0) + isnull(dep.Deposit2,0) + isnull(dep.Deposit3,0) + isnull(dep.Deposit4,0)+ isnull(dep.Deposit5,0)+ isnull(dep.Deposit6,0)+ isnull(dep.Deposit7,0)+ isnull(dep.Deposit8,0)+ isnull(dep.Deposit9,0)
+                       End otherDeposits,
+                       ux.dtMovein MoveIn, ux.dtLeaseTo LeaseExp, ux.dtMoveOut MoveOut, 
+                       taa.Balance Balance,
+                       t.hMyPerson hmyPerson, ut.sDesc utDescription,
+                       case upper(us.sStatus) when N'OCCUPIED NO NOTICE' then N'Current/Notice/Vacant Tenants' 
+                                              when N'NOTICE UNRENTED' then N'Current/Notice/Vacant Tenants' 
+                                              when N'NOTICE RENTED' then N'Future Tenants' 
+                                              when N'VACANT RENTED READY' then N'Future Tenants' 
+                                              when N'VACANT RENTED NOT READY' then N'Future Tenants' 
+                                              when N'VACANT UNRENTED READY' then N'Current/Notice/Vacant Tenants' 
+                                              when N'VACANT UNRENTED NOT READY' then N'Current/Notice/Vacant Tenants'  
+                                              When N'MODEL' then N'Current/Notice/Vacant Tenants' 
+                                              When N'DOWN' then N'Current/Notice/Vacant Tenants' 
+                                              when N'ADMIN' then N'Current/Notice/Vacant Tenants'
+                       end grouper,
+                       1 as myUnion
+FROM property p 
+INNER JOIN unit u ON p.hmy = u.hproperty and isnull(u.exclude,0)=0 
+INNER JOIN (SELECT max(us1.hmy) hmy, us1.hunit hunit
+          FROM unit_Status us1 WHERE us1.dtstart <= convert(datetime, N'09/01/2025', 101) AND ((us1.dtend is null) or (us1.dtend >= convert(datetime, N'09/01/2025', 101))) 
+            GROUP BY us1.hunit) maxus on maxus.hunit = u.hmy 
+INNER JOIN unit_status us on us.hmy = maxus.hmy AND us.hunit = maxus.hunit 
+LEFT JOIN tenant t on t.hmyperson = us.htent 
+LEFT OUTER JOIN unitxRef ux ON ux.hTenant = t.hMyPerson AND ux.hUnit = u.hMy
+LEFT OUTER JOIN #tempDeposits dep ON dep.TenantId = t.hMyperson AND dep.hUnit = u.hMy
+ LEFT JOIN camrule cr ON t.hMyPerson = cr.hTenant AND u.hMy = case when isnull(cr.hUnit, 0) = 0 then t.hUnit else cr.hUnit end   AND cr.hchargecode in (SELECT hRentChgCode FROM param) 
+
+                     AND convert(datetime, N'09/01/2025', 101) between cr.dtfrom AND isnull(cr.dtto,dateadd(yyyy,1000,getdate()))                     AND 0 = CASE month(convert(datetime, N'09/01/2025', 101)) WHEN 01 THEN isnull(cr.jan,0) WHEN 02 THEN isnull(cr.feb,0) WHEN 03 THEN isnull(cr.mar,0)
+                                               WHEN 04 THEN isnull(cr.apr,0) WHEN 05 THEN isnull(cr.may,0) WHEN 06 THEN isnull(cr.jun,0) 
+                                               WHEN 07 THEN isnull(cr.jul,0) WHEN 08 THEN isnull(cr.aug,0) WHEN 09 THEN isnull(cr.sep,0) 
+                                               WHEN 10 THEN isnull(cr.oct,0) WHEN 11 THEN isnull(cr.nov,0) WHEN 12 THEN isnull(cr.dec,0) 
+                               End 
+LEFT JOIN (SELECT SUM(CASE WHEN ctoth.itype = 0 THEN CASE crOth1.iestimatetype WHEN 0 THEN ((crOth1.DESTIMATED * t1.srent)/100) WHEN 1 THEN case when isnull(p1.iTypeCommercial,0) = 0 then (crOth1.DESTIMATED * t1.dleasegrosssqft) else crOth1.dMonthlyAmount end WHEN 2 THEN (crOth1.DESTIMATED) ELSE 0 END ELSE 0 END) DESTIMATEDCAM, SUM(CASE WHEN ctoth.itype = 3 THEN CASE crOth1.iestimatetype WHEN 0 THEN ((crOth1.DESTIMATED * t1.srent)/100) WHEN 1 THEN case when isnull(p1.iTypeCommercial,0) = 0 then (crOth1.DESTIMATED * t1.dleasegrosssqft) else crOth1.dMonthlyAmount end WHEN 2 THEN (crOth1.DESTIMATED) ELSE 0 END ELSE 0 END) DESTIMATEDMISC, crOth1.hTenant hTenant, case when isnull(crOth1.hUnit,0) = 0 then T1.hUnit else crOth1.hUnit end hUnit FROM TENANT T1 INNER JOIN camrule crOth1  ON T1.HMYPERSON = crOth1.HTENANT 
+           inner join property p1 on t1.hproperty = p1.hmy 
+                                 AND p1.hMy in (3)
+       INNER  join chargtyp ctoth on ctoth.hmy = crOth1.hchargecode and ctoth.itype = 3
+           WHERE 1=1
+         AND convert(datetime, N'09/01/2025', 101) between crOth1.dtfrom AND isnull(crOth1.dtto,dateadd(yyyy,1000,getdate()))
+         AND 0 = CASE month(convert(datetime, N'09/01/2025', 101)) WHEN 01 THEN isnull(crOth1.jan,0) WHEN 02 THEN isnull(crOth1.feb,0) WHEN 03 THEN isnull(crOth1.mar,0) 
+                                   WHEN 04 THEN isnull(crOth1.apr,0)	WHEN 05 THEN isnull(crOth1.may,0) WHEN 06 THEN isnull(crOth1.jun,0) 
+                                   WHEN 07 THEN isnull(crOth1.jul,0)	WHEN 08 THEN isnull(crOth1.aug,0) WHEN 09 THEN isnull(crOth1.sep,0) 
+                                   WHEN 10 THEN isnull(crOth1.oct,0)	WHEN 11 THEN isnull(crOth1.nov,0) WHEN 12 THEN isnull(crOth1.dec,0) 
+                   End 
+GROUP BY crOth1.hTenant, case when isnull(crOth1.hUnit,0) = 0 then T1.hUnit else crOth1.hUnit end, p1.iTypeCommercial) crOth ON t.hMyPerson = crOth.hTenant AND u.hMy = crOth.hUnit 
+LEFT OUTER JOIN unittype ut ON (u.hunittype = ut.hmy) 
+ LEFT JOIN (SELECT max(uh1.hmy) hmy, uh1.hUnit hUnit FROM unit_history uh1 
+          Where convert(char,dtDate,101) <= convert(datetime, N'09/01/2025', 101) 
+            GROUP BY uh1.hUnit) maxUH on maxuh.hUnit = u.hmy 
+ LEFT JOIN unit_history uh on uh.hmy=maxuh.hmy AND uh.hUnit = u.hmy 
+ LEFT JOIN (SELECT max(th1.hmy) hmy, th1.htent htent FROM tenant_history th1 
+          Where convert(char,th1.dtDate,101) <= convert(datetime, N'09/01/2025', 101) 
+            and ISNULL(th1.iActivityType, 0) = 0  
+            GROUP BY th1.htent) maxTH on maxTh.htent = t.hmyperson 
+LEFT JOIN tenant_history th on th.hmy=maxth.hmy AND th.htent = t.hmyperson 
+ Left Join	(Select ta.hTenant hTenant, ta.hUnit hUnit, 	
+                    IsNull(SUM(cAge30),0) + IsNull(SUM(cAge60),0) + IsNull(SUM(cAge90),0) + IsNull(SUM(cAgeOver90),0) +  
+                    IsNull(SUM(cPrepays),0) Balance 
+           From ssTenantAging ta Where ta.dtPeriod = convert(datetime, N'09/01/2025', 101) group by ta.hTenant, ta.hUnit) taa On taa.hTenant = t.hmyperson AND taa.hUnit = u.hMy  WHERE 1=1 
+AND p.hMy in (3)
+
+AND upper(us.sstatus) NOT IN(N'EXCLUDED', N'WAITLIST')
+GROUP BY p.scode, p.hmy,p.iTypeCommercial, u.hmy, u.sCode, ut.scode, ut.sDesc, ut.hMy, p.sState, ut.sDesc, t.scode, t.hMyPerson, us.sStatus, t.sfirstname, t.slastname, isnull(uh.dsqft,u.dsqft),  isnull(uh.crent,u.sRent),  isnull(dep.Deposit0,0), 
+         Case upper(us.sStatus) when N'VACANT UNRENTED READY' THEN 0 WHEN N'VACANT UNRENTED NOT READY' THEN 0 
+                                WHEN N'MODEL' THEN 0 WHEN N'DOWN' THEN 0 WHEN N'ADMIN' THEN 0
+                                ELSE isnull(dep.Deposit0,0) 
+         End,
+         Case upper(us.sStatus) 
+               when N'VACANT UNRENTED READY' Then 0  
+               When N'VACANT UNRENTED NOT READY' Then 0  
+               When N'MODEL' Then 0 When N'DOWN' Then 0 When N'ADMIN' Then 0  
+               ELSE isnull(dep.Deposit1,0) + isnull(dep.Deposit2,0) + isnull(dep.Deposit3,0) + isnull(dep.Deposit4,0)+ isnull(dep.Deposit5,0)+ isnull(dep.Deposit6,0)+ isnull(dep.Deposit7,0)+ isnull(dep.Deposit8,0)+ isnull(dep.Deposit9,0)
+         end,
+         ux.dtMovein, ux.dtLeaseTo, ux.dtMoveOut, taa.Balance,
+         crOth.DESTIMATEDCAM, crOth.DESTIMATEDMISC, t.iStatus, t.hProspect 
+ UNION ALL 
+SELECT p.scode PropCode, u.sCode ucode, ut.scode UnitTypeCode, ut.sDesc UnitTypeDesc,
+       p.hmy Prophmy, u.hmy uhmy, ut.hMy UnitTypeId,
+       isnull(uh.dsqft,u.dsqft) SQFT, 
+       p.sState State,
+       case upper(us.sStatus) when N'NOTICE RENTED' then isnull(t.scode,N'VACANT') 
+                              when N'MODEL' then N'MODEL' 
+                              When N'DOWN' then N'DOWN' 
+                              when N'ADMIN' then N'ADMIN' 
+                              else N'VACANT'
+       END TSCODE, 
+       CASE WHEN upper(us.sStatus) = N'NOTICE RENTED' then case rtrim(isnull(t.sfirstname,'')) + CASE rtrim(isnull(t.sfirstname,'')) WHEN '' THEN '' ELSE N' ' END + rtrim(isnull(t.slastname,''))
+                                                             when '' then N'VACANT'
+                                                             else rtrim(isnull(t.sfirstname,'')) + CASE rtrim(isnull(t.sfirstname,'')) WHEN '' THEN '' ELSE N' ' END + rtrim(isnull(t.slastname,''))
+                                                          end
+            ELSE N'VACANT'
+       END Tenant_Name,
+       t.iStatus TenantStatus,  
+       t.hProspect ProspectId,  
+   isnull(uh.crent,u.sRent) MarketRent, 
+   CASE WHEN upper(us.sStatus) = N'NOTICE RENTED' then Case WHEN t.scode IS NULL THEN 0
+                                                           ELSE sum(CASE cr.iestimatetype 
+                                                                      WHEN 0 THEN ((cr.DESTIMATED * t.srent)/100) 
+                                                                      WHEN 1 THEN case when isnull(p.iTypeCommercial,0) = 0 then (cr.DESTIMATED * t.dleasegrosssqft) else cr.dMonthlyAmount end 
+                                                                      WHEN 2 THEN (cr.DESTIMATED) 
+                                                                      ELSE 0
+                                                                    END) 
+                                                      End
+        ELSE 0
+    END TenantRent,
+    0 TenantCAM,
+    CASE WHEN upper(us.sStatus) = N'NOTICE RENTED' then Case WHEN t. scode IS NULL THEN 0
+                                                            ELSE crOth.DESTIMATEDMISC 
+                                                       END  
+         Else 0
+    END TenantMisc,
+        CASE WHEN upper(us.sStatus) = N'NOTICE RENTED' then isNull(dep.Deposit0, 0) 
+             Else 0
+        End Deposit, 
+        CASE WHEN upper(us.sStatus) = N'NOTICE RENTED' then
+                                                        isnull(dep.Deposit1,0) + isnull(dep.Deposit2,0) + isnull(dep.Deposit3,0) + isnull(dep.Deposit4,0)+ isnull(dep.Deposit5,0)+ isnull(dep.Deposit6,0) 
+                                                        + isnull(dep.Deposit7,0)+ isnull(dep.Deposit8,0)+ isnull(dep.Deposit9,0)
+             Else 0
+        End otherDeposits, 
+        CASE WHEN upper(us.sStatus) = N'NOTICE RENTED' then ux.dtMovein else NULL  End MoveIn, 
+        CASE WHEN upper(us.sStatus) = N'NOTICE RENTED' then ux.dtLeaseTo else NULL End LeaseExp, 
+        CASE WHEN upper(us.sStatus) = N'NOTICE RENTED' then ux.dtMoveOut else NULL End MoveOut, 
+        CASE WHEN upper(us.sStatus) = N'NOTICE RENTED' then taa.Balance
+             Else 0
+        End  Balance, 
+        t.hMyPerson hmyPerson, ut.sDesc utDescription, 
+        N'Current/Notice/Vacant Tenants' grouper, 2 as myUnion 
+FROM property p 
+INNER JOIN unit u ON p.hmy = u.hproperty 
+INNER JOIN (SELECT max(us1.hmy) hmy, us1.hunit hunit FROM unit_Status us1 
+          WHERE convert(char,us1.dtstart,106) <= convert(datetime, N'09/01/2025', 101) and ((us1.dtend is null) or (us1.dtend >= convert(datetime, N'09/01/2025', 101))) 
+            GROUP BY us1.hunit) maxus on maxus.hunit = u.hmy 
+INNER JOIN unit_status us on us.hmy = maxus.hmy AND us.hunit = maxus.hunit 
+LEFT JOIN ( SELECT MAX(us1.hmy) MaxUS, hUnit             FROM Unit_Status us1             WHERE us1.dtEnd <= convert(datetime, N'09/01/2025', 101) 
+            AND us1.sStatus = N'Notice Unrented'             GROUP BY hunit ) NoticeUnRented ON NoticeUnRented.hUnit = u.hmy AND us.sStatus = N'Notice Rented'LEFT JOIN  Unit_Status us2 ON NoticeUnRented.MaxUS = us2.hMy 
+LEFT JOIN Tenant t ON t.hMyPerson = us2.hTent
+LEFT OUTER JOIN unitxRef ux ON ux.hTenant = t.hMyPerson AND ux.hUnit = u.hMy
+LEFT OUTER JOIN #tempDeposits dep ON dep.TenantId = t.hMyperson AND dep.hUnit = u.hMy
+ LEFT JOIN camrule cr ON t.hMyPerson = cr.hTenant AND u.hMy = case when isnull(cr.hUnit, 0) = 0 then t.hUnit else cr.hUnit end
+   AND cr.hchargecode in (SELECT hRentChgCode FROM param) 
+
+                  AND convert(datetime, N'09/01/2025', 101) between cr.dtfrom AND isnull(cr.dtto,dateadd(yyyy,1000,getdate())) 
+                  AND 0 = CASE month(convert(datetime, N'09/01/2025', 101))  
+                               WHEN 01 THEN isnull(cr.jan,0) WHEN 02 THEN isnull(cr.feb,0) WHEN 03 THEN isnull(cr.mar,0)
+                               WHEN 04 THEN isnull(cr.apr,0)	WHEN 05 THEN isnull(cr.may,0) WHEN 06 THEN isnull(cr.jun,0) 
+                               WHEN 07 THEN isnull(cr.jul,0)	WHEN 08 THEN isnull(cr.aug,0) WHEN 09 THEN isnull(cr.sep,0) 
+                               WHEN 10 THEN isnull(cr.oct,0)	WHEN 11 THEN isnull(cr.nov,0) WHEN 12 THEN isnull(cr.dec,0) 
+                            End 
+ LEFT  JOIN (SELECT SUM(CASE WHEN ctoth.itype = 0 THEN CASE crOth1.iestimatetype WHEN 0 THEN ((crOth1.DESTIMATED * t1.srent)/100) WHEN 1 THEN case when isnull(p1.iTypeCommercial,0) = 0 then (crOth1.DESTIMATED * t1.dleasegrosssqft) else crOth1.dMonthlyAmount end WHEN 2 THEN (crOth1.DESTIMATED) ELSE 0 END ELSE 0 END) DESTIMATEDCAM, SUM(CASE WHEN ctoth.itype = 3 THEN CASE crOth1.iestimatetype WHEN 0 THEN ((crOth1.DESTIMATED * t1.srent)/100) WHEN 1 THEN case when isnull(p1.iTypeCommercial,0) = 0 then (crOth1.DESTIMATED * t1.dleasegrosssqft) else crOth1.dMonthlyAmount end WHEN 2 THEN (crOth1.DESTIMATED) ELSE 0 END ELSE 0 END) DESTIMATEDMISC, crOth1.hTenant hTenant, case when isnull(crOth1.hUnit, 0) = 0 then t1.hUnit else crOth1.hUnit end hUnit FROM TENANT T1 INNER JOIN camrule crOth1  ON T1.HMYPERSON = crOth1.HTENANT 
+             inner join property p1 on t1.hproperty = p1.hmy 
+                     AND p1.hMy in (3)
+         INNER  join chargtyp ctoth on ctoth.hmy = crOth1.hchargecode and ctoth.itype = 3   
+             WHERE 1=1
+           AND convert(datetime, N'09/01/2025', 101) between crOth1.dtfrom AND isnull(crOth1.dtto,dateadd(yyyy,1000,getdate())) 
+           AND 0 = CASE month(convert(datetime, N'09/01/2025', 101))  
+                        WHEN 01 THEN isnull(crOth1.jan,0) WHEN 02 THEN isnull(crOth1.feb,0) WHEN 03 THEN isnull(crOth1.mar,0)
+                        WHEN 04 THEN isnull(crOth1.apr,0)	WHEN 05 THEN isnull(crOth1.may,0) WHEN 06 THEN isnull(crOth1.jun,0) 
+                        WHEN 07 THEN isnull(crOth1.jul,0)	WHEN 08 THEN isnull(crOth1.aug,0) WHEN 09 THEN isnull(crOth1.sep,0) 
+                        WHEN 10 THEN isnull(crOth1.oct,0)	WHEN 11 THEN isnull(crOth1.nov,0) WHEN 12 THEN isnull(crOth1.dec,0) 
+                     End 
+            GROUP BY crOth1.hTenant, case when isnull(crOth1.hUnit, 0) = 0 then t1.hUnit else crOth1.hUnit end , p1.iTypeCommercial) crOth ON t.hMyPerson = crOth.hTenant AND u.hMy = crOth.hUnit 
+LEFT JOIN unittype ut ON (u.hunittype = ut.hmy)  
+ LEFT JOIN (SELECT max(uh1.hmy) hmy, uh1.hUnit hUnit 
+            FROM unit_history uh1 
+          Where convert(char,uh1.dtDate,101) <= convert(datetime, N'09/01/2025', 101) 
+            GROUP BY uh1.hUnit) maxUH on maxuh.hUnit = u.hmy 
+LEFT JOIN unit_history uh on uh.hmy=maxuh.hmy AND uh.hUnit = u.hmy 
+LEFT JOIN (SELECT max(th1.hmy) hmy, th1.htent htent 
+           FROM tenant_history th1 
+         WHERE th1.dtDate <= convert(datetime, N'09/01/2025', 101) 
+           and ISNULL(th1.iActivityType, 0) = 0  
+           GROUP BY th1.htent) maxTH on maxTh.htent = t.hmyperson 
+LEFT JOIN tenant_history th on th.hmy=maxth.hmy AND th.htent = t.hmyperson 
+Left Join	(Select ta.hTenant hTenant, ta.hUnit hUnit, 	
+                    IsNull(SUM(cAge30),0) + IsNull(SUM(cAge60),0) + IsNull(SUM(cAge90),0) + IsNull(SUM(cAgeOver90),0) +  
+                    IsNull(SUM(cPrepays),0) Balance 
+           From ssTenantAging ta Where ta.dtPeriod = convert(datetime, N'09/01/2025', 101) group by ta.hTenant, ta.hUnit) taa On taa.hTenant = t.hmyperson AND u.hMy = taa.hUnit 
+WHERE upper(us.sstatus) in(N'NOTICE RENTED', N'VACANT RENTED NOT READY', N'VACANT RENTED READY') 
+AND p.hMy in (3)
+and ux.dtmovein is not NULL
+
+GROUP BY us.sstatus ,p.scode ,p.hmy,p.iTypeCommercial, u.hmy, u.sCode, ut.scode, ut.sDesc, ut.hMy, p.sState, ut.sdesc , t.hmyperson, t.scode, t.sfirstname, t.slastname, isnull(uh.dsqft,u.dsqft), 
+         isnull(uh.crent,u.sRent) , 
+         CASE WHEN upper(us.sStatus) = N'NOTICE RENTED' then isNull(dep.Deposit0, 0) Else 0 End, 
+         CASE WHEN upper(us.sStatus) = N'NOTICE RENTED' then isnull(dep.Deposit1,0)  + isnull(dep.Deposit2,0) + isnull(dep.Deposit3,0)  
+                                                            + isnull(dep.Deposit4,0) + isnull(dep.Deposit5,0) + isnull(dep.Deposit6,0) + isnull(dep.Deposit7,0) + isnull(dep.Deposit8,0) + isnull(dep.Deposit9,0)
+              else 0
+         end, 
+         ux.dtMovein ,ux.dtLeaseTo,  ux.dtMoveOut,   
+         CASE WHEN upper(us.sStatus) = N'NOTICE RENTED' then taa.Balance Else 0 End,
+         crOth.DESTIMATEDCAM, crOth.DESTIMATEDMISC, t.iStatus, t.hProspect 
+) R 
+WHERE COALESCE(NULLIF(LTRIM(RTRIM(R.Tenant_Name)), N''), N'VACANT') <> N'VACANT'
+ORDER BY 1, Grouper, len(R.ucode), R.ucode ASC 
+
+
+
+//end select 
