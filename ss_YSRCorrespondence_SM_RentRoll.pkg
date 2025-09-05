@@ -7,15 +7,14 @@
 		Loads the Correspondence Custom Report Setup.
 		Report : ...PSC Rent Roll Report (SM_RentRoll) 
 	PACKAGE CREATED ON
-		Date & Time : 9/4/2025 8:01:58 PM
+		Date & Time : 9/4/2025 8:18:51 PM
 	VERSION
 		CorrespondencePIv07.13
 	REPORT NOTES
 		For creating hooks for the report, follow below naming of Stored Procedure.
 		YSR_Generate_Before_SM_RentRoll
 		YSR_Generate_After_SM_RentRoll
-		09/04/2025 
-		Beril Pehlivan
+		
 //End Notes
 //SQL
 /* Delete YSR Report Setup but retain hmy */ 
@@ -25,10 +24,10 @@ EXEC YSR_DeleteReportSetup 'SM_RentRoll', 1
 UPDATE CustomCorrespMerging 
 SET sCode='SM_RentRoll',sName='...PSC Rent Roll Report',sScriptFileName='',sSELECT='SELECT distinct p.hmy                                AS phmy,
     p.scode Property_Code,
-    ''Property = '' + p.scode + '' '' + ISNULL(p.saddr1,'''')       AS PropertyName,
-    ''As Of = '' + CAST(MONTH(@AsOfDate) AS varchar(2)) + ''/'' 
-               + CAST(DAY(@AsOfDate)   AS varchar(2)) + ''/'' 
-               + CAST(YEAR(@AsOfDate)  AS varchar(4))         AS AsOfDate
+     ISNULL(p.saddr1,'''')       AS PropertyName,
+    CAST(MONTH(''#AsOfDate#'') AS varchar(2)) + ''/'' 
+               + CAST(DAY(''#AsOfDate#'')   AS varchar(2)) + ''/'' 
+               + CAST(YEAR(''#AsOfDate#'')  AS varchar(4))         AS AsOfDate
 FROM property p
 WHERE 1=1
 #conditions#',sKeyCols='Property_Code',bInactive=0,bNewScreenOutput =0,bTabbedOutput =0,bTitleUsingFreezePanes =0,iObjectType=0,
@@ -43,8 +42,7 @@ WHERE 1=1
      bShowOnPortalChecked=0,
      sMergedFileEmailTo='' ,
      sEmailType='' ,
-     sNotes='09/04/2025 
-Beril Pehlivan' ,
+     sNotes='' ,
      sReportOutputPath='' ,
      bSchedulerRpt='0' ,
      bLongRunRpt='0' ,     iDgSignObjectType =0,
@@ -63,10 +61,10 @@ WHERE UPPER(sCode)=UPPER('SM_RentRoll')
 INSERT INTO CustomCorrespMerging(sCode,sName,sScriptFileName,sSELECT,sKeyCols,bInactive,bNewScreenOutput,bTabbedOutput,bTitleUsingFreezePanes,iObjectType,sHRecord,hAttachment,hEmailTemplate,hEmailToRole,sMergedFileEmailTo,sEmailType,sNotes,bIncludeAllContacts,bMergeReportsWithNoEmailId,bAttachReportChecked,bEmailReportChecked,bShowOnPortalChecked,sReportOutputPath,bSchedulerRpt,bLongRunRpt,iDgSignObjectType,sDgSignHRecord,bHideFromGenerateDropDown,sQRColumns,iReportType,iWizardStep,bWizardCompleted,bAlwaysPreview,sHelpTopic,sAttachDescCol)
 SELECT 'SM_RentRoll','...PSC Rent Roll Report','','SELECT distinct p.hmy                                AS phmy,
     p.scode Property_Code,
-    ''Property = '' + p.scode + '' '' + ISNULL(p.saddr1,'''')       AS PropertyName,
-    ''As Of = '' + CAST(MONTH(@AsOfDate) AS varchar(2)) + ''/'' 
-               + CAST(DAY(@AsOfDate)   AS varchar(2)) + ''/'' 
-               + CAST(YEAR(@AsOfDate)  AS varchar(4))         AS AsOfDate
+     ISNULL(p.saddr1,'''')       AS PropertyName,
+    CAST(MONTH(''#AsOfDate#'') AS varchar(2)) + ''/'' 
+               + CAST(DAY(''#AsOfDate#'')   AS varchar(2)) + ''/'' 
+               + CAST(YEAR(''#AsOfDate#'')  AS varchar(4))         AS AsOfDate
 FROM property p
 WHERE 1=1
 #conditions#','Property_Code',0,0,0,0,0,''
@@ -75,8 +73,7 @@ WHERE 1=1
       ,(SELECT hmy FROM Role WHERE UPPER(sDesc) =UPPER('') AND iObjectType =0)
       ,''
       ,''
-      ,'09/04/2025 
-Beril Pehlivan'
+      ,''
       ,0
       ,0
       ,0
@@ -164,27 +161,7 @@ WHERE NOT EXISTS(SELECT 1
 
 /* Insert or UPDATE Report Sections for PS */ 
 UPDATE CustomCorrespSections 
-SET hCustomCorrespSetup =(SELECT hmy FROM CustomCorrespSetup WHERE UPPER(Scode) = UPPER('PS') AND hCustomCorrespMerging=(SELECT Hmy FROM CustomCorrespMerging WHERE UPPER(Scode)=UPPER('SM_RentRoll'))),bMultiRow=0,bPrimary=1,
-    hCustomCorrespStANDardList=(SELECT hmy FROM CustomCorrespStANDardList WHERE UPPER(sName) =UPPER('')),bInactive=0,sCode='display',sName='Main',sDataSource='display',sKeyCols='Property_Code',sGroupingCols='',sSummaryCols='',sOrderbyCols='',sSubTotalCols=''
-WHERE hMy=(SELECT ISNULL(Max(crsc1.hMy),0) 
- FROM CustomCorrespSetup crst1 
- INNER JOIN CustomCorrespSections crsc1 ON crsc1.hCustomCorrespSetup=crst1.HMY 
- WHERE UPPER(crst1.Scode)=UPPER('PS')
- AND UPPER(crsc1.Scode)=UPPER('display') 
- AND crst1.hCustomCorrespMerging=(SELECT Hmy FROM CustomCorrespMerging WHERE UPPER(Scode)=UPPER('SM_RentRoll'))) 
-;
-INSERT INTO CustomCorrespSections(hCustomCorrespSetup,bMultiRow,bPrimary,bInactive,sCode,sName,sDataSource,sKeyCols,sGroupingCols,sSummaryCols,sSubTotalCols,hCustomCorrespStANDardList,sOrderbyCols)
-SELECT (SELECT hmy FROM CustomCorrespSetup WHERE UPPER(Scode) = UPPER('PS') AND hCustomCorrespMerging=(SELECT Hmy FROM CustomCorrespMerging WHERE UPPER(Scode)=UPPER('SM_RentRoll'))),0,1,0,'display','Main','display','Property_Code','','','',
-     (SELECT hmy FROM CustomCorrespStANDardList WHERE UPPER(sName) =UPPER('')),''
-WHERE NOT EXISTS( 
-         SELECT 1 
-         FROM CustomCorrespSections
-         WHERE UPPER(Scode)=UPPER('display')
-         AND hCustomCorrespSetup = (SELECT hmy FROM CustomCorrespSetup WHERE UPPER(Scode)=UPPER('PS')
-         AND hCustomCorrespMerging=(SELECT Hmy FROM CustomCorrespMerging WHERE UPPER(Scode)=UPPER('SM_RentRoll'))))
-;
-UPDATE CustomCorrespSections 
-SET hCustomCorrespSetup =(SELECT hmy FROM CustomCorrespSetup WHERE UPPER(Scode) = UPPER('PS') AND hCustomCorrespMerging=(SELECT Hmy FROM CustomCorrespMerging WHERE UPPER(Scode)=UPPER('SM_RentRoll'))),bMultiRow=1,bPrimary=0,
+SET hCustomCorrespSetup =(SELECT hmy FROM CustomCorrespSetup WHERE UPPER(Scode) = UPPER('PS') AND hCustomCorrespMerging=(SELECT Hmy FROM CustomCorrespMerging WHERE UPPER(Scode)=UPPER('SM_RentRoll'))),bMultiRow=1,bPrimary=1,
     hCustomCorrespStANDardList=(SELECT hmy FROM CustomCorrespStANDardList WHERE UPPER(sName) =UPPER('')),bInactive=0,sCode='header',sName='Header',sDataSource='header',sKeyCols='Property_Code',sGroupingCols='',sSummaryCols='',sOrderbyCols='',sSubTotalCols=''
 WHERE hMy=(SELECT ISNULL(Max(crsc1.hMy),0) 
  FROM CustomCorrespSetup crst1 
@@ -194,12 +171,32 @@ WHERE hMy=(SELECT ISNULL(Max(crsc1.hMy),0)
  AND crst1.hCustomCorrespMerging=(SELECT Hmy FROM CustomCorrespMerging WHERE UPPER(Scode)=UPPER('SM_RentRoll'))) 
 ;
 INSERT INTO CustomCorrespSections(hCustomCorrespSetup,bMultiRow,bPrimary,bInactive,sCode,sName,sDataSource,sKeyCols,sGroupingCols,sSummaryCols,sSubTotalCols,hCustomCorrespStANDardList,sOrderbyCols)
-SELECT (SELECT hmy FROM CustomCorrespSetup WHERE UPPER(Scode) = UPPER('PS') AND hCustomCorrespMerging=(SELECT Hmy FROM CustomCorrespMerging WHERE UPPER(Scode)=UPPER('SM_RentRoll'))),1,0,0,'header','Header','header','Property_Code','','','',
+SELECT (SELECT hmy FROM CustomCorrespSetup WHERE UPPER(Scode) = UPPER('PS') AND hCustomCorrespMerging=(SELECT Hmy FROM CustomCorrespMerging WHERE UPPER(Scode)=UPPER('SM_RentRoll'))),1,1,0,'header','Header','header','Property_Code','','','',
      (SELECT hmy FROM CustomCorrespStANDardList WHERE UPPER(sName) =UPPER('')),''
 WHERE NOT EXISTS( 
          SELECT 1 
          FROM CustomCorrespSections
          WHERE UPPER(Scode)=UPPER('header')
+         AND hCustomCorrespSetup = (SELECT hmy FROM CustomCorrespSetup WHERE UPPER(Scode)=UPPER('PS')
+         AND hCustomCorrespMerging=(SELECT Hmy FROM CustomCorrespMerging WHERE UPPER(Scode)=UPPER('SM_RentRoll'))))
+;
+UPDATE CustomCorrespSections 
+SET hCustomCorrespSetup =(SELECT hmy FROM CustomCorrespSetup WHERE UPPER(Scode) = UPPER('PS') AND hCustomCorrespMerging=(SELECT Hmy FROM CustomCorrespMerging WHERE UPPER(Scode)=UPPER('SM_RentRoll'))),bMultiRow=1,bPrimary=0,
+    hCustomCorrespStANDardList=(SELECT hmy FROM CustomCorrespStANDardList WHERE UPPER(sName) =UPPER('')),bInactive=0,sCode='display',sName='Main',sDataSource='display',sKeyCols='Property_Code',sGroupingCols='',sSummaryCols='',sOrderbyCols='',sSubTotalCols=''
+WHERE hMy=(SELECT ISNULL(Max(crsc1.hMy),0) 
+ FROM CustomCorrespSetup crst1 
+ INNER JOIN CustomCorrespSections crsc1 ON crsc1.hCustomCorrespSetup=crst1.HMY 
+ WHERE UPPER(crst1.Scode)=UPPER('PS')
+ AND UPPER(crsc1.Scode)=UPPER('display') 
+ AND crst1.hCustomCorrespMerging=(SELECT Hmy FROM CustomCorrespMerging WHERE UPPER(Scode)=UPPER('SM_RentRoll'))) 
+;
+INSERT INTO CustomCorrespSections(hCustomCorrespSetup,bMultiRow,bPrimary,bInactive,sCode,sName,sDataSource,sKeyCols,sGroupingCols,sSummaryCols,sSubTotalCols,hCustomCorrespStANDardList,sOrderbyCols)
+SELECT (SELECT hmy FROM CustomCorrespSetup WHERE UPPER(Scode) = UPPER('PS') AND hCustomCorrespMerging=(SELECT Hmy FROM CustomCorrespMerging WHERE UPPER(Scode)=UPPER('SM_RentRoll'))),1,0,0,'display','Main','display','Property_Code','','','',
+     (SELECT hmy FROM CustomCorrespStANDardList WHERE UPPER(sName) =UPPER('')),''
+WHERE NOT EXISTS( 
+         SELECT 1 
+         FROM CustomCorrespSections
+         WHERE UPPER(Scode)=UPPER('display')
          AND hCustomCorrespSetup = (SELECT hmy FROM CustomCorrespSetup WHERE UPPER(Scode)=UPPER('PS')
          AND hCustomCorrespMerging=(SELECT Hmy FROM CustomCorrespMerging WHERE UPPER(Scode)=UPPER('SM_RentRoll'))))
 ;

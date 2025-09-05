@@ -11,9 +11,11 @@
 
 //select header
 
---DECLARE @AsOfDate date = CONVERT(date, N'#AsOfDate#', 101);  
 
-SELECT TOP (1)
+
+/*DECLARE @AsOfDate date = CONVERT(date, N'#AsOfDate#', 101)*/  
+
+SELECT 
     p.hmy                                AS phmy,
     p.scode Property_Code,
     'Property = ' + p.scode + ' ' + ISNULL(p.saddr1,'')       AS PropertyName,
@@ -32,7 +34,7 @@ WHERE 1=1
 
 
 //select display 
-/*
+
 IF OBJECT_ID(N'tempdb..#tempDeposits') IS NOT NULL
     DROP TABLE #tempDeposits;
 
@@ -60,9 +62,9 @@ SELECT t.hMyPerson TenantId, case when isnull(tc.hUnit, 0) = 0 then t.hUnit else
             AND tr.uPostDate <= convert(datetime, N'#AsOfDate#', 101)
               AND isnull(tr.sNotes, '') NOT LIKE N'%reverse%'
               AND d.sAmount > 0
-              #conditions#
+              
               GROUP BY t.hMyPerson, case when isnull(tc.hUnit, 0) = 0 then t.hUnit else tc.hUnit end
-*/
+
 
 
 SELECT * FROM ( SELECT p.sCode Property_Code, u.sCode ucode, ut.sCode UnitTypeCode, ut.sDesc UnitTypeDesc,
@@ -120,7 +122,7 @@ SELECT * FROM ( SELECT p.sCode Property_Code, u.sCode ucode, ut.sCode UnitTypeCo
                                 ELSE crOth.DESTIMATEDMISC 
                            End
                    END TenantMisc,
-                     /*  Case upper(us.sStatus) 
+                       Case upper(us.sStatus) 
                              when N'VACANT UNRENTED READY' Then 0  
                              When N'VACANT UNRENTED NOT READY' Then 0  
                              When N'MODEL' Then 0 When N'DOWN' Then 0 When N'ADMIN' Then 0  
@@ -131,7 +133,7 @@ SELECT * FROM ( SELECT p.sCode Property_Code, u.sCode ucode, ut.sCode UnitTypeCo
                              When N'VACANT UNRENTED NOT READY' Then 0  
                              When N'MODEL' Then 0 When N'DOWN' Then 0 When N'ADMIN' Then 0  
                              Else isnull(dep.Deposit1,0) + isnull(dep.Deposit2,0) + isnull(dep.Deposit3,0) + isnull(dep.Deposit4,0)+ isnull(dep.Deposit5,0)+ isnull(dep.Deposit6,0)+ isnull(dep.Deposit7,0)+ isnull(dep.Deposit8,0)+ isnull(dep.Deposit9,0)
-                       End otherDeposits,*/
+                       End otherDeposits,
                        ux.dtMovein MoveIn, ux.dtLeaseTo LeaseExp, ux.dtMoveOut MoveOut, 
                        taa.Balance Balance,
                        t.hMyPerson hmyPerson, ut.sDesc utDescription,
@@ -155,7 +157,7 @@ INNER JOIN (SELECT max(us1.hmy) hmy, us1.hunit hunit
 INNER JOIN unit_status us on us.hmy = maxus.hmy AND us.hunit = maxus.hunit 
 LEFT JOIN tenant t on t.hmyperson = us.htent 
 LEFT OUTER JOIN unitxRef ux ON ux.hTenant = t.hMyPerson AND ux.hUnit = u.hMy
-/*LEFT OUTER JOIN #tempDeposits dep ON dep.TenantId = t.hMyperson AND dep.hUnit = u.hMy*/
+LEFT OUTER JOIN #tempDeposits dep ON dep.TenantId = t.hMyperson AND dep.hUnit = u.hMy
  LEFT JOIN camrule cr ON t.hMyPerson = cr.hTenant AND u.hMy = case when isnull(cr.hUnit, 0) = 0 then t.hUnit else cr.hUnit end   AND cr.hchargecode in (SELECT hRentChgCode FROM param) 
 
                      AND convert(datetime, N'#AsOfDate#', 101) between cr.dtfrom AND isnull(cr.dtto,dateadd(yyyy,1000,getdate()))                     AND 0 = CASE month(convert(datetime, N'#AsOfDate#', 101)) WHEN 01 THEN isnull(cr.jan,0) WHEN 02 THEN isnull(cr.feb,0) WHEN 03 THEN isnull(cr.mar,0)
@@ -193,7 +195,7 @@ LEFT JOIN tenant_history th on th.hmy=maxth.hmy AND th.htent = t.hmyperson
 
 AND upper(us.sstatus) NOT IN(N'EXCLUDED', N'WAITLIST')
 GROUP BY p.scode, p.hmy,p.iTypeCommercial, u.hmy, u.sCode, ut.scode, ut.sDesc, ut.hMy, p.sState, ut.sDesc, t.scode, t.hMyPerson, us.sStatus, t.sfirstname, t.slastname, isnull(uh.dsqft,u.dsqft),  isnull(uh.crent,u.sRent),  
-/*isnull(dep.Deposit0,0), 
+isnull(dep.Deposit0,0), 
          Case upper(us.sStatus) when N'VACANT UNRENTED READY' THEN 0 WHEN N'VACANT UNRENTED NOT READY' THEN 0 
                                 WHEN N'MODEL' THEN 0 WHEN N'DOWN' THEN 0 WHEN N'ADMIN' THEN 0
                                 ELSE isnull(dep.Deposit0,0) 
@@ -203,7 +205,7 @@ GROUP BY p.scode, p.hmy,p.iTypeCommercial, u.hmy, u.sCode, ut.scode, ut.sDesc, u
                When N'VACANT UNRENTED NOT READY' Then 0  
                When N'MODEL' Then 0 When N'DOWN' Then 0 When N'ADMIN' Then 0  
                ELSE isnull(dep.Deposit1,0) + isnull(dep.Deposit2,0) + isnull(dep.Deposit3,0) + isnull(dep.Deposit4,0)+ isnull(dep.Deposit5,0)+ isnull(dep.Deposit6,0)+ isnull(dep.Deposit7,0)+ isnull(dep.Deposit8,0)+ isnull(dep.Deposit9,0)
-         end,*/
+         end,
          ux.dtMovein, ux.dtLeaseTo, ux.dtMoveOut, taa.Balance,
          crOth.DESTIMATEDCAM, crOth.DESTIMATEDMISC, t.iStatus, t.hProspect 
  UNION ALL 
@@ -242,14 +244,14 @@ SELECT p.scode Property_Code, u.sCode ucode, ut.scode UnitTypeCode, ut.sDesc Uni
                                                        END  
          Else 0
     END TenantMisc,
-      /*  CASE WHEN upper(us.sStatus) = N'NOTICE RENTED' then isNull(dep.Deposit0, 0) 
+        CASE WHEN upper(us.sStatus) = N'NOTICE RENTED' then isNull(dep.Deposit0, 0) 
              Else 0
         End Deposit, 
         CASE WHEN upper(us.sStatus) = N'NOTICE RENTED' then
                                                         isnull(dep.Deposit1,0) + isnull(dep.Deposit2,0) + isnull(dep.Deposit3,0) + isnull(dep.Deposit4,0)+ isnull(dep.Deposit5,0)+ isnull(dep.Deposit6,0) 
                                                         + isnull(dep.Deposit7,0)+ isnull(dep.Deposit8,0)+ isnull(dep.Deposit9,0)
              Else 0
-        End otherDeposits, */
+        End otherDeposits, 
         CASE WHEN upper(us.sStatus) = N'NOTICE RENTED' then ux.dtMovein else NULL  End MoveIn, 
         CASE WHEN upper(us.sStatus) = N'NOTICE RENTED' then ux.dtLeaseTo else NULL End LeaseExp, 
         CASE WHEN upper(us.sStatus) = N'NOTICE RENTED' then ux.dtMoveOut else NULL End MoveOut, 
@@ -268,7 +270,7 @@ LEFT JOIN ( SELECT MAX(us1.hmy) MaxUS, hUnit             FROM Unit_Status us1   
             AND us1.sStatus = N'Notice Unrented'             GROUP BY hunit ) NoticeUnRented ON NoticeUnRented.hUnit = u.hmy AND us.sStatus = N'Notice Rented'LEFT JOIN  Unit_Status us2 ON NoticeUnRented.MaxUS = us2.hMy 
 LEFT JOIN Tenant t ON t.hMyPerson = us2.hTent
 LEFT OUTER JOIN unitxRef ux ON ux.hTenant = t.hMyPerson AND ux.hUnit = u.hMy
-/*LEFT OUTER JOIN #tempDeposits dep ON dep.TenantId = t.hMyperson AND dep.hUnit = u.hMy*/
+LEFT OUTER JOIN #tempDeposits dep ON dep.TenantId = t.hMyperson AND dep.hUnit = u.hMy
  LEFT JOIN camrule cr ON t.hMyPerson = cr.hTenant AND u.hMy = case when isnull(cr.hUnit, 0) = 0 then t.hUnit else cr.hUnit end
    AND cr.hchargecode in (SELECT hRentChgCode FROM param) 
 
@@ -314,11 +316,11 @@ and ux.dtmovein is not NULL
 
 GROUP BY us.sstatus ,p.scode ,p.hmy,p.iTypeCommercial, u.hmy, u.sCode, ut.scode, ut.sDesc, ut.hMy, p.sState, ut.sdesc , t.hmyperson, t.scode, t.sfirstname, t.slastname, isnull(uh.dsqft,u.dsqft), 
          isnull(uh.crent,u.sRent) , 
-        /* CASE WHEN upper(us.sStatus) = N'NOTICE RENTED' then isNull(dep.Deposit0, 0) Else 0 End, 
+        CASE WHEN upper(us.sStatus) = N'NOTICE RENTED' then isNull(dep.Deposit0, 0) Else 0 End, 
          CASE WHEN upper(us.sStatus) = N'NOTICE RENTED' then isnull(dep.Deposit1,0)  + isnull(dep.Deposit2,0) + isnull(dep.Deposit3,0)  
                                                             + isnull(dep.Deposit4,0) + isnull(dep.Deposit5,0) + isnull(dep.Deposit6,0) + isnull(dep.Deposit7,0) + isnull(dep.Deposit8,0) + isnull(dep.Deposit9,0)
               else 0
-         end, */
+         end, 
          ux.dtMovein ,ux.dtLeaseTo,  ux.dtMoveOut,   
          CASE WHEN upper(us.sStatus) = N'NOTICE RENTED' then taa.Balance Else 0 End,
          crOth.DESTIMATEDCAM, crOth.DESTIMATEDMISC, t.iStatus, t.hProspect 
